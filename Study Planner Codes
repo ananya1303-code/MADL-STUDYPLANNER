@@ -1,0 +1,722 @@
+ACTIVITYMAIN.XML
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <!-- Toolbar (TOP BAR + BELL ICON) -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/primary"
+        app:title="Dashboard"
+        app:titleTextColor="@android:color/white"/>
+
+    <!-- MAIN CONTENT -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- Greeting -->
+        <TextView
+            android:id="@+id/tvGreeting"
+            android:text="Hello 👋"
+            android:textSize="22sp"
+            android:textColor="@color/text_primary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+        <!-- Stats -->
+        <TextView
+            android:id="@+id/tvStats"
+            android:text="Tasks: 0 | Focus: 0 min"
+            android:textColor="@color/text_secondary"
+            android:layout_marginTop="10dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+        <!-- TOP SPACER (push buttons to center) -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"/>
+
+        <!-- CENTER BUTTON SECTION -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <Button
+                android:id="@+id/btnTimer"
+                android:text="Open Timer"
+                android:backgroundTint="@color/primary"
+                android:textColor="@android:color/white"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+
+            <Button
+                android:id="@+id/btnPlanner"
+                android:text="Open Planner"
+                android:layout_marginTop="10dp"
+                android:backgroundTint="@color/primary"
+                android:textColor="@android:color/white"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+
+            <Button
+                android:id="@+id/btnStats"
+                android:text="Weekly Stats"
+                android:layout_marginTop="10dp"
+                android:backgroundTint="@color/primary"
+                android:textColor="@android:color/white"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
+
+        <!-- BOTTOM SPACER (balance center alignment) -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"/>
+
+    </LinearLayout>
+
+</LinearLayout>
+
+
+MENU_MAIN.XML
+
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/menu_notify"
+        android:title="Notifications"
+        android:icon="@android:drawable/ic_popup_reminder"
+        app:showAsAction="always"/>
+
+</menu>
+
+
+
+MAINACTIVITY.KT
+
+package com.example.studyplannerapplication
+
+import android.content.Intent
+import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
+import androidx.appcompat.app.AppCompatActivity
+import com.example.studyplannerapplication.databinding.ActivityMainBinding
+
+class MainActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivityMainBinding
+    private lateinit var pref: PrefManager
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        pref = PrefManager(this)
+
+        // Toolbar setup (for bell icon)
+        setSupportActionBar(binding.toolbar)
+
+        // Buttons
+        binding.btnTimer.setOnClickListener {
+            startActivity(Intent(this, TimerActivity::class.java))
+        }
+
+        binding.btnPlanner.setOnClickListener {
+            startActivity(Intent(this, PlannerActivity::class.java))
+        }
+
+        binding.btnStats.setOnClickListener {
+            startActivity(Intent(this, StatsActivity::class.java))
+        }
+    }
+
+    // Bell icon menu
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_main, menu)
+        return true
+    }
+
+    // Bell click
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.menu_notify -> {
+                startActivity(Intent(this, NotificationActivity::class.java))
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        val time = pref.getFocusTime() / 60000
+        val tasks = pref.getTasksCompleted()
+
+        binding.tvStats.text = "Tasks: $tasks | Focus: $time min"
+    }
+}
+
+
+
+PREFMANAGER.KT
+
+package com.example.studyplannerapplication
+
+import android.content.Context
+import android.content.SharedPreferences
+
+class PrefManager(context: Context) {
+
+    private val sharedPref: SharedPreferences =
+        context.getSharedPreferences("study_app", Context.MODE_PRIVATE)
+
+    private val editor: SharedPreferences.Editor = sharedPref.edit()
+
+    //  Notification ON/OFF
+    fun setNotificationEnabled(value: Boolean) {
+        editor.putBoolean("notify", value).apply()
+    }
+
+    fun isNotificationEnabled(): Boolean {
+        return sharedPref.getBoolean("notify", false)
+    }
+
+    //  Notification Time
+    fun saveTime(time: String) {
+        editor.putString("time", time).apply()
+    }
+
+    fun getTime(): String {
+        return sharedPref.getString("time", "Not Set") ?: "Not Set"
+    }
+
+    // ⏱ Focus Time (milliseconds)
+    fun saveFocusTime(time: Long) {
+        editor.putLong("focus_time", time).apply()
+    }
+
+    fun getFocusTime(): Long {
+        return sharedPref.getLong("focus_time", 0L)
+    }
+
+    //  Tasks Completed
+    fun saveTasksCompleted(count: Int) {
+        editor.putInt("tasks_done", count).apply()
+    }
+
+    fun getTasksCompleted(): Int {
+        return sharedPref.getInt("tasks_done", 0)
+    }
+}
+
+
+NOTIFICATIONACTIVITY.KT
+package com.example.studyplannerapplication
+
+import android.app.TimePickerDialog
+import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
+import com.example.studyplannerapplication.databinding.ActivityNotificationsBinding
+import java.util.*
+
+class NotificationActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivityNotificationsBinding
+    private lateinit var pref: PrefManager
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityNotificationsBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        pref = PrefManager(this)
+
+        // Load saved state
+        binding.switchNotify.isChecked = pref.isNotificationEnabled()
+        binding.tvTime.text = "Time: ${pref.getTime()}"
+
+        binding.switchNotify.setOnCheckedChangeListener { _, isChecked ->
+            pref.setNotificationEnabled(isChecked)
+        }
+
+        binding.btnTime.setOnClickListener {
+            showTimePicker()
+        }
+    }
+
+    private fun showTimePicker() {
+        val cal = Calendar.getInstance()
+
+        val dialog = TimePickerDialog(
+            this,
+            { _, hour, minute ->
+                val time = String.format("%02d:%02d", hour, minute)
+                binding.tvTime.text = "Time: $time"
+                pref.saveTime(time)
+            },
+            cal.get(Calendar.HOUR_OF_DAY),
+            cal.get(Calendar.MINUTE),
+            true
+        )
+        dialog.show()
+    }
+}
+
+
+ACTIVITY_NOTIFICATIONS.XML
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Notifications"
+        android:textSize="22sp"
+        android:textColor="@color/text_primary"/>
+
+    <!-- Enable/Disable -->
+    <Switch
+        android:id="@+id/switchNotify"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Enable Daily Reminder"
+        android:layout_marginTop="20dp"/>
+
+    <!-- Time Button -->
+    <Button
+        android:id="@+id/btnTime"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Set Reminder Time"
+        android:layout_marginTop="15dp"
+        android:backgroundTint="@color/primary"
+        android:textColor="@android:color/white"/>
+
+    <!-- Selected time -->
+    <TextView
+        android:id="@+id/tvTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Time: Not Set"
+        android:layout_marginTop="10dp"
+        android:textColor="@color/text_secondary"/>
+
+</LinearLayout>
+
+
+
+ACTIVITY_TIMER.XML
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:id="@+id/tvTime"
+        android:text="25:00"
+        android:textSize="40sp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+
+    <Button
+        android:id="@+id/btnStart"
+        android:text="Start"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+
+    <Button
+        android:id="@+id/btnPause"
+        android:text="Pause"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+
+    <Button
+        android:id="@+id/btnReset"
+        android:text="Reset"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+
+</LinearLayout>
+
+
+TIMERACTIVITY.KT
+package com.example.studyplannerapplication
+
+import android.os.Bundle
+import android.os.CountDownTimer
+import androidx.appcompat.app.AppCompatActivity
+import com.example.studyplannerapplication.databinding.ActivityTimerBinding
+
+class TimerActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivityTimerBinding
+
+    private var totalTime = 25 * 60 * 1000L   // 25 min in ms
+    private var timeLeft = totalTime
+
+    private var timer: CountDownTimer? = null
+    private var isRunning = false
+
+    private lateinit var pref: PrefManager
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        binding = ActivityTimerBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        pref = PrefManager(this)
+
+        binding.btnStart.setOnClickListener { startTimer() }
+        binding.btnPause.setOnClickListener { pauseTimer() }
+        binding.btnReset.setOnClickListener { resetTimer() }
+
+        updateUI()
+    }
+
+    private fun startTimer() {
+        if (isRunning) return
+
+        timer = object : CountDownTimer(timeLeft, 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                timeLeft = millisUntilFinished
+                updateUI()
+            }
+
+            override fun onFinish() {
+                // Save full session (25 min)
+                pref.saveFocusTime(pref.getFocusTime() + totalTime)
+
+                isRunning = false
+
+                // Reset timer
+                timeLeft = totalTime
+                updateUI()
+            }
+        }.start()
+
+        isRunning = true
+    }
+
+    private fun pauseTimer() {
+        timer?.cancel()
+        isRunning = false
+    }
+
+    private fun resetTimer() {
+        timer?.cancel()
+
+        // Save partial focus time (if user studied some time)
+        val focusedTime = totalTime - timeLeft
+        if (focusedTime > 0) {
+            pref.saveFocusTime(pref.getFocusTime() + focusedTime)
+        }
+
+        timeLeft = totalTime
+        isRunning = false
+        updateUI()
+    }
+
+    private fun updateUI() {
+        val minutes = (timeLeft / 1000) / 60
+        val seconds = (timeLeft / 1000) % 60
+
+        binding.tvTime.text = String.format("%02d:%02d", minutes, seconds)
+    }
+}
+
+
+
+STATSACTIVITY.KT
+package com.example.studyplannerapplication
+
+import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
+import com.example.studyplannerapplication.databinding.ActivityStatsBinding
+
+class StatsActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivityStatsBinding
+    private lateinit var pref: PrefManager
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityStatsBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        pref = PrefManager(this)
+
+        val time = pref.getFocusTime() / 60000
+        val tasks = pref.getTasksCompleted()
+
+        binding.tvData.text = "Focus Time: $time min\nTasks Done: $tasks"
+    }
+}
+
+
+ANDROIDMANIFEST
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.StudyPlannerApplication"
+        tools:targetApi="31">
+
+        <!-- Main Screen -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- ADD THESE (IMPORTANT) -->
+        <activity android:name=".TimerActivity" />
+        <activity android:name=".PlannerActivity" />
+        <activity android:name=".StatsActivity" />
+        <activity android:name=".NotificationActivity"/>
+
+    </application>
+
+</manifest>
+
+
+COLORS.XML
+<resources>
+
+    <color name="primary">#FFA366</color>
+    <color name="primary_light">#A29BFE</color>
+    <color name="accent">#00C896</color>
+
+    <color name="background">#FFE2C8</color>
+    <color name="text_primary">#1E1E2C</color>
+    <color name="text_secondary">#6B6B80</color>
+
+</resources>
+
+
+
+THEMES.
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:padding="20dp"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Weekly Stats"
+        android:textSize="22sp"/>
+
+    <TextView
+        android:id="@+id/tvData"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Small steps every day lead to big results...🌱 "
+        android:layout_gravity="center"
+        android:layout_marginTop="40dp"/>
+
+</LinearLayout>
+
+
+PLANNERACTIVITY.KT
+package com.example.studyplannerapplication
+
+import android.app.AlertDialog
+import android.os.Bundle
+import android.widget.ArrayAdapter
+import android.widget.EditText
+import androidx.appcompat.app.AppCompatActivity
+import com.example.studyplannerapplication.databinding.ActivityPlannerBinding
+
+class PlannerActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivityPlannerBinding
+    private val tasks = mutableListOf<String>()
+    private lateinit var adapter: ArrayAdapter<String>
+    private lateinit var pref: PrefManager
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityPlannerBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        pref = PrefManager(this)
+
+        adapter = ArrayAdapter(this, android.R.layout.simple_list_item_multiple_choice, tasks)
+        binding.listTasks.adapter = adapter
+        binding.listTasks.choiceMode = 2
+
+        binding.btnAdd.setOnClickListener { showDialog() }
+
+        binding.listTasks.setOnItemClickListener { _, _, _, _ ->
+            pref.saveTasksCompleted(binding.listTasks.checkedItemCount)
+        }
+    }
+
+    private fun showDialog() {
+        val input = EditText(this)
+
+        AlertDialog.Builder(this)
+            .setTitle("Add Task")
+            .setView(input)
+            .setPositiveButton("Add") { _, _ ->
+                tasks.add(input.text.toString())
+                adapter.notifyDataSetChanged()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+}
+
+
+
+
+GRADLEPROPERTIES
+# Project-wide Gradle settings.
+
+# JVM memory settings
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+
+# Kotlin code style
+kotlin.code.style=official
+
+# Enable AndroidX (IMPORTANT)
+android.useAndroidX=true
+
+# Automatically convert old support libraries to AndroidX
+android.enableJetifier=true
+android.defaults.buildfeatures.resvalues=true
+android.sdk.defaultTargetSdkToCompileSdkIfUnset=false
+android.enableAppCompileTimeRClass=false
+android.usesSdkInManifest.disallowed=false
+android.uniquePackageNames=false
+android.dependency.useConstraints=true
+android.r8.strictFullModeForKeepRules=false
+android.r8.optimizedResourceShrinking=false
+android.builtInKotlin=false
+android.newDsl=false
+
+
+
+BUILD.GRADLE.KTS APP
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+}
+
+android {
+    namespace = "com.example.studyplannerapplication"
+    compileSdk = 34
+
+    defaultConfig {
+        applicationId = "com.example.studyplannerapplication"
+        minSdk = 24
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0"
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    buildFeatures {
+        viewBinding = true
+    }
+}
+
+dependencies {
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("com.google.android.material:material:1.11.0")
+
+    // Optional but useful
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+}
+
+
+
+BUILD.GRADLE.KTS(STUDYPLANNERAPPLICATION)
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+// Top-level build file
+plugins {
+    id("com.android.application") version "9.1.1" apply false
+    id("org.jetbrains.kotlin.android") version "2.2.10" apply false
+}
+
+
+
+
+SETTINGS.GRADLE.KTS
+
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = "StudyPlannerApplication2"
+include(":app")
+ 
